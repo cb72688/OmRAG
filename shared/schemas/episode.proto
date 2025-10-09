@@ -1,0 +1,431 @@
+syntax = "proto3";
+
+package omega_rag.memory;
+
+option go_package = "github.com/omega-rag/proto/memory";
+option java_package = "com.omegarag.proto.memory";
+option java_multiple_files = true;
+
+import "google/protobuf/timestamp.proto";
+
+// Represents a complete task execution episode
+message Episode {
+  // Unique identifier for the episode
+  string id = 1;
+  
+  // Timestamp when episode was created
+  google.protobuf.Timestamp created_at = 2;
+  
+  // Timestamp when episode was last updated
+  google.protobuf.Timestamp updated_at = 3;
+  
+  // The problem or query that initiated this episode
+  Problem problem = 4;
+  
+  // The plan generated to solve the problem
+  Plan plan = 5;
+  
+  // The execution trajectory
+  Trajectory trajectory = 6;
+  
+  // The outcome of the episode
+  Outcome outcome = 7;
+  
+  // Metadata about the episode
+  EpisodeMetadata metadata = 8;
+  
+  // Vector embedding of the episode (for similarity search)
+  repeated float embedding = 9 [packed = true];
+}
+
+// The initial problem description
+message Problem {
+  // The user's query or task description
+  string description = 1;
+  
+  // Problem category/type
+  string category = 2;
+  
+  // Difficulty level (1-10)
+  int32 difficulty = 3;
+  
+  // Domain or subject area
+  string domain = 4;
+  
+  // Any additional context
+  map<string, string> context = 5;
+}
+
+// The generated plan
+message Plan {
+  // Unique plan identifier
+  string plan_id = 1;
+  
+  // Overall strategy description
+  string strategy = 2;
+  
+  // List of subtasks
+  repeated SubTask subtasks = 3;
+  
+  // Estimated total time (seconds)
+  float estimated_duration = 4;
+  
+  // Confidence score (0.0-1.0)
+  float confidence = 5;
+}
+
+// A single subtask in the plan
+message SubTask {
+  // Subtask identifier
+  string id = 1;
+  
+  // Subtask description
+  string description = 2;
+  
+  // Tool or action to use
+  string tool = 3;
+  
+  // Tool parameters
+  map<string, string> parameters = 4;
+  
+  // Dependencies (IDs of subtasks that must complete first)
+  repeated string dependencies = 5;
+  
+  // Expected output type
+  string output_type = 6;
+}
+
+// The execution trajectory
+message Trajectory {
+  // List of executed steps
+  repeated ExecutionStep steps = 1;
+  
+  // Total execution time (seconds)
+  float total_duration = 2;
+  
+  // Number of tool calls
+  int32 tool_call_count = 3;
+  
+  // Number of retries/corrections
+  int32 retry_count = 4;
+}
+
+// A single execution step
+message ExecutionStep {
+  // Step number
+  int32 step_number = 1;
+  
+  // Timestamp when step started
+  google.protobuf.Timestamp started_at = 2;
+  
+  // Timestamp when step completed
+  google.protobuf.Timestamp completed_at = 3;
+  
+  // The subtask being executed
+  string subtask_id = 4;
+  
+  // Tool used
+  string tool = 5;
+  
+  // Input to the tool
+  string input = 6;
+  
+  // Output from the tool
+  string output = 7;
+  
+  // Status of the step
+  StepStatus status = 8;
+  
+  // Error message if any
+  string error_message = 9;
+  
+  // Duration in seconds
+  float duration = 10;
+}
+
+// Status of an execution step
+enum StepStatus {
+  STEP_STATUS_UNSPECIFIED = 0;
+  STEP_STATUS_PENDING = 1;
+  STEP_STATUS_RUNNING = 2;
+  STEP_STATUS_SUCCESS = 3;
+  STEP_STATUS_FAILED = 4;
+  STEP_STATUS_SKIPPED = 5;
+  STEP_STATUS_RETRY = 6;
+}
+
+// The outcome of the episode
+message Outcome {
+  // Whether the task was successful
+  bool success = 1;
+  
+  // Final result or answer
+  string result = 2;
+  
+  // Reward score (-1.0 to 1.0)
+  float reward = 3;
+  
+  // Quality score (0.0-1.0)
+  float quality_score = 4;
+  
+  // User satisfaction (0.0-1.0, if available)
+  optional float user_satisfaction = 5;
+  
+  // Failure reason if unsuccessful
+  string failure_reason = 6;
+  
+  // Metrics collected during execution
+  map<string, float> metrics = 7;
+}
+
+// Metadata about the episode
+message EpisodeMetadata {
+  // Agent version that created this episode
+  string agent_version = 1;
+  
+  // Model used for planning
+  string planner_model = 2;
+  
+  // Session ID this episode belongs to
+  string session_id = 3;
+  
+  // User ID (if available)
+  optional string user_id = 4;
+  
+  // Tags for categorization
+  repeated string tags = 5;
+  
+  // Number of times this episode has been retrieved
+  int32 retrieval_count = 6;
+  
+  // Number of times this episode led to successful outcomes when retrieved
+  int32 success_influence_count = 7;
+  
+  // Whether this episode has been consolidated into semantic memory
+  bool consolidated = 8;
+  
+  // Archived flag
+  bool archived = 9;
+  
+  // Custom metadata fields
+  map<string, string> custom_fields = 10;
+}
+
+// Request to store an episode
+message StoreEpisodeRequest {
+  Episode episode = 1;
+  
+  // Whether to generate embedding automatically
+  bool auto_embed = 2;
+  
+  // Collection/partition to store in
+  string collection = 3;
+}
+
+// Response from storing an episode
+message StoreEpisodeResponse {
+  // ID of the stored episode
+  string episode_id = 1;
+  
+  // Whether the operation was successful
+  bool success = 2;
+  
+  // Error message if any
+  string error_message = 3;
+  
+  // Generated embedding if auto_embed was true
+  repeated float embedding = 4 [packed = true];
+}
+
+// Request to retrieve episodes by ID
+message GetEpisodeRequest {
+  // Episode ID
+  string episode_id = 1;
+  
+  // Whether to include the full trajectory
+  bool include_trajectory = 2;
+  
+  // Collection to retrieve from
+  string collection = 3;
+}
+
+// Response containing an episode
+message GetEpisodeResponse {
+  Episode episode = 1;
+  
+  bool found = 2;
+  
+  string error_message = 3;
+}
+
+// Query embedding wrapper (separate message, not in oneof)
+message QueryEmbedding {
+  repeated float values = 1 [packed = true];
+}
+
+// Request to search for similar episodes
+message SearchEpisodesRequest {
+  // Query can be either embedding or text (use oneof without labels)
+  oneof query {
+    QueryEmbedding embedding_query = 1;
+    string text_query = 2;
+  }
+  
+  // Number of results to return
+  int32 top_k = 3;
+  
+  // Minimum similarity threshold (0.0-1.0)
+  float min_similarity = 4;
+  
+  // Filter criteria
+  EpisodeFilter filter = 5;
+  
+  // Collection to search in
+  string collection = 6;
+}
+
+// Filter for episode search
+message EpisodeFilter {
+  // Filter by success (empty means no filter)
+  bool success_only = 1;
+  
+  // Whether success_only is set
+  bool has_success_filter = 2;
+  
+  // Filter by category
+  repeated string categories = 3;
+  
+  // Filter by domain
+  repeated string domains = 4;
+  
+  // Filter by tags
+  repeated string tags = 5;
+  
+  // Filter by minimum reward
+  float min_reward = 6;
+  bool has_min_reward = 7;
+  
+  // Filter by minimum quality score
+  float min_quality = 8;
+  bool has_min_quality = 9;
+  
+  // Filter by date range
+  google.protobuf.Timestamp created_after = 10;
+  google.protobuf.Timestamp created_before = 11;
+  
+  // Filter by session ID
+  string session_id = 12;
+  
+  // Exclude archived episodes
+  bool exclude_archived = 13;
+}
+
+// Response containing search results
+message SearchEpisodesResponse {
+  // Matching episodes with similarity scores
+  repeated EpisodeSearchResult results = 1;
+  
+  // Total number of matches found
+  int32 total_matches = 2;
+  
+  // Search duration in milliseconds
+  float search_duration_ms = 3;
+  
+  string error_message = 4;
+}
+
+// A single search result
+message EpisodeSearchResult {
+  // The episode
+  Episode episode = 1;
+  
+  // Similarity score (0.0-1.0)
+  float similarity = 2;
+  
+  // Rank in results
+  int32 rank = 3;
+}
+
+// Batch operations
+message BatchStoreEpisodesRequest {
+  repeated Episode episodes = 1;
+  
+  bool auto_embed = 2;
+  
+  string collection = 3;
+}
+
+message BatchStoreEpisodesResponse {
+  repeated string episode_ids = 1;
+  
+  int32 success_count = 2;
+  
+  int32 failure_count = 3;
+  
+  repeated string error_messages = 4;
+}
+
+// Update episode metadata
+message UpdateEpisodeMetadataRequest {
+  string episode_id = 1;
+  
+  EpisodeMetadata metadata = 2;
+  
+  // Fields to update (if empty, update all)
+  repeated string update_mask = 3;
+  
+  string collection = 4;
+}
+
+message UpdateEpisodeMetadataResponse {
+  bool success = 1;
+  
+  string error_message = 2;
+}
+
+// Delete episodes
+message DeleteEpisodeRequest {
+  string episode_id = 1;
+  
+  string collection = 2;
+  
+  // Soft delete (archive) or hard delete
+  bool soft_delete = 3;
+}
+
+message DeleteEpisodeResponse {
+  bool success = 1;
+  
+  string error_message = 2;
+}
+
+// Statistics about episodes
+message EpisodeStatistics {
+  int64 total_episodes = 1;
+  
+  int64 successful_episodes = 2;
+  
+  int64 failed_episodes = 3;
+  
+  float average_reward = 4;
+  
+  float average_quality = 5;
+  
+  float average_duration = 6;
+  
+  map<string, int64> episodes_by_category = 7;
+  
+  map<string, int64> episodes_by_domain = 8;
+}
+
+message GetStatisticsRequest {
+  string collection = 1;
+  
+  EpisodeFilter filter = 2;
+}
+
+message GetStatisticsResponse {
+  EpisodeStatistics statistics = 1;
+  
+  string error_message = 2;
+}
