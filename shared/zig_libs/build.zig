@@ -21,6 +21,16 @@ pub fn build(b: *std.Build) void {
     // target and optimize options) will be listed when running `zig build --help`
     // in this directory.
 
+    const tests = b.addTest(.{
+        .root_source_file = b.path("tests/test_matrix_ops.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    tests.addModule("math", b.createModule(.{
+        .source_file = b.path("./src/math/math.zig")
+    ]));
+
     // This creates a module, which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
     // Zig modules are the preferred way of making Zig code available to consumers.

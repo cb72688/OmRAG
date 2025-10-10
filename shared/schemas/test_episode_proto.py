@@ -6,12 +6,12 @@ of the Episode protobuf messages.
 
 import pytest
 import sys
-import os
 from pathlib import Path
 from datetime import datetime, timezone
 from google.protobuf.timestamp_pb2 import Timestamp
 from google.protobuf import json_format
 import json
+import math
 
 # Add the generated proto directory to the path
 SCHEMA_DIR = Path(__file__).parent.parent
@@ -39,12 +39,12 @@ episode_pb2 = None
 import_error = None
 
 try:
-    import episode_pb2
+    from .python import episode_pb2
     print(f"✓ Successfully imported episode_pb2 from {episode_pb2.__file__}")
 except ImportError as e:
     import_error = e
     print(f"✗ Failed to import episode_pb2: {e}")
-    print(f"Current sys.path: {sys.path[:3]}...")  # Print first 3 entries
+    print(f"Current sys.path: {sys.path[:3]}...")
 
 print("=== End Test Setup Debug ===\n")
 
@@ -56,6 +56,18 @@ if episode_pb2 is None:
         f"Run 'cd {SCHEMA_DIR} && ./generate.sh' to generate the files.",
         allow_module_level=True
     )
+
+
+def approx_equal(a, b, rel_tol=1e-5, abs_tol=1e-7):
+    """Check if two floats are approximately equal (handles float32 precision)."""
+    return math.isclose(a, b, rel_tol=rel_tol, abs_tol=abs_tol)
+
+
+def approx_equal_list(list_a, list_b, rel_tol=1e-5, abs_tol=1e-7):
+    """Check if two lists of floats are approximately equal."""
+    if len(list_a) != len(list_b):
+        return False
+    return all(approx_equal(a, b, rel_tol, abs_tol) for a, b in zip(list_a, list_b))
 
 
 class TestEpisodeStructure:
@@ -162,9 +174,12 @@ class TestEpisodeStructure:
         outcome.metrics["memory_mb"] = 128.5
 
         assert outcome.success is True
-        assert outcome.reward == 0.95
+        # Use approximate comparison for float32 values
+        assert approx_equal(outcome.reward, 0.95)
+        assert approx_equal(outcome.quality_score, 0.88)
+        assert approx_equal(outcome.user_satisfaction, 0.9)
         assert len(outcome.metrics) == 3
-        assert outcome.metrics["latency_ms"] == 450.2
+        assert approx_equal(outcome.metrics["latency_ms"], 450.2)
 
     def test_episode_metadata(self):
         """Test EpisodeMetadata with various fields."""
@@ -210,7 +225,8 @@ class TestEpisodeSerialization:
 
         assert deserialized.id == original.id
         assert deserialized.problem.description == original.problem.description
-        assert deserialized.outcome.reward == original.outcome.reward
+        assert approx_equal(deserialized.outcome.reward,
+                            original.outcome.reward)
 
     def test_json_conversion(self):
         """Test conversion to and from JSON."""
@@ -246,7 +262,8 @@ class TestEpisodeSerialization:
         deserialized.ParseFromString(serialized)
 
         assert len(deserialized.embedding) == len(embedding)
-        assert list(deserialized.embedding) == embedding
+        # Use approximate comparison for float32 values
+        assert approx_equal_list(list(deserialized.embedding), embedding)
 
 
 class TestSearchRequests:
@@ -319,7 +336,9 @@ class TestSearchRequests:
         assert filter_msg.has_success_filter is True
         assert len(filter_msg.categories) == 2
         assert len(filter_msg.tags) == 2
-        assert filter_msg.min_reward == 0.7
+        # Use approximate comparison for float32 values
+        assert approx_equal(filter_msg.min_reward, 0.7)
+        assert approx_equal(filter_msg.min_quality, 0.8)
         assert filter_msg.has_min_reward is True
 
     def test_search_response(self):
@@ -396,6 +415,284 @@ class TestOneofBehavior:
         assert request2.WhichOneof("query") == "text_query"
         assert request2.text_query == "serialization test"
         assert request2.top_k == 10
+
+
+class TestBatchOperations:
+    """Test batch operation messages."""
+
+    def test_batch_store_request(self):
+        """Test batch store request with multiple episodes."""
+        request = episode_pb2.BatchStoreEpisodesRequest()
+        request.auto_embed = True
+        request.collection = "batch_test"
+
+        # Add multiple episodes
+        for i in range(10):
+            episode = request.episodes.add()
+            episode.id = f"ep_batch_{i}"
+            episode.problem.description = f"Batch problem {i}"
+            episode.outcome.success = i % 2 == 0
+
+        assert len(request.episodes) == 10
+        assert request.auto_embed is True
+
+    def test_batch_store_response(self):
+        """Test batch store response structure."""
+        response = episode_pb2.BatchStoreEpisodesResponse()
+        response.episode_ids.extend([f"ep_{i}" for i in range(10)])
+        response.success_count = 8
+        response.failure_count = 2
+        response.error_messages.extend([
+            "Episode 3 failed: invalid format",
+            "Episode 7 failed: duplicate ID"
+        ])
+
+        assert len(response.episode_ids) == 10
+        assert response.success_count == 8
+        assert len(response.error_messages) == 2
+
+
+class TestStatistics:
+    """Test statistics messages."""
+
+    def test_episode_statistics(self):
+        """Test EpisodeStatistics structure."""
+        stats = episode_pb2.EpisodeStatistics()
+        stats.total_episodes = 1000
+        stats.successful_episodes = 850
+        stats.failed_episodes = 150
+        stats.average_reward = 0.78
+        stats.average_quality = 0.82
+        stats.average_duration = 45.3
+
+        # Category breakdown
+        stats.episodes_by_category["coding"] = 400
+        stats.episodes_by_category["research"] = 300
+        stats.episodes_by_category["analysis"] = 300
+
+        # Domain breakdown
+        stats.episodes_by_domain["python"] = 500
+        stats.episodes_by_domain["javascript"] = 300
+        stats.episodes_by_domain["general"] = 200
+
+        assert stats.total_episodes == 1000
+        assert stats.successful_episodes + stats.failed_episodes == stats.total_episodes
+        assert len(stats.episodes_by_category) == 3
+        assert len(stats.episodes_by_domain) == 3
+
+
+class TestDataIntegrity:
+    """Test data integrity and validation scenarios."""
+
+    def test_required_fields_can_be_empty(self):
+        """Test that messages can be created with minimal fields (proto3 allows this)."""
+        episode = episode_pb2.Episode()
+        # In proto3, all fields are optional, but we should handle empty messages
+        assert episode.id == ""
+        assert episode.problem.description == ""
+
+    def test_repeated_fields_are_lists(self):
+        """Test that repeated fields behave like lists."""
+        plan = episode_pb2.Plan()
+
+        # Test append
+        subtask = plan.subtasks.add()
+        subtask.id = "st_1"
+
+        assert len(plan.subtasks) == 1
+        assert isinstance(plan.subtasks, type(
+            plan.subtasks))  # RepeatedComposite
+
+        # Test iteration
+        for st in plan.subtasks:
+            assert st.id == "st_1"
+
+    def test_map_fields_are_dicts(self):
+        """Test that map fields behave like dictionaries."""
+        problem = episode_pb2.Problem()
+        problem.context["key1"] = "value1"
+        problem.context["key2"] = "value2"
+
+        assert "key1" in problem.context
+        assert problem.context["key1"] == "value1"
+        assert len(problem.context) == 2
+
+        # Test iteration
+        keys = list(problem.context.keys())
+        assert "key1" in keys
+        assert "key2" in keys
+
+    def test_optional_fields(self):
+        """Test optional field handling."""
+        outcome = episode_pb2.Outcome()
+
+        # user_satisfaction is optional
+        assert not outcome.HasField("user_satisfaction")
+
+        outcome.user_satisfaction = 0.9
+        assert outcome.HasField("user_satisfaction")
+        assert approx_equal(outcome.user_satisfaction, 0.9)
+
+
+class TestEdgeCases:
+    """Test edge cases and boundary conditions."""
+
+    def test_large_embedding_vector(self):
+        """Test handling of large embedding vectors."""
+        episode = episode_pb2.Episode()
+        # OpenAI embedding size
+        large_embedding = [float(i) / 1000 for i in range(1536)]
+        episode.embedding.extend(large_embedding)
+
+        serialized = episode.SerializeToString()
+        deserialized = episode_pb2.Episode()
+        deserialized.ParseFromString(serialized)
+
+        assert len(deserialized.embedding) == 1536
+        # Just check a few values for approximate equality
+        assert approx_equal(deserialized.embedding[0], large_embedding[0])
+        assert approx_equal(deserialized.embedding[100], large_embedding[100])
+        assert approx_equal(deserialized.embedding[-1], large_embedding[-1])
+
+    def test_empty_collections(self):
+        """Test handling of empty repeated fields."""
+        plan = episode_pb2.Plan()
+        assert len(plan.subtasks) == 0
+
+        trajectory = episode_pb2.Trajectory()
+        assert len(trajectory.steps) == 0
+
+    def test_unicode_strings(self):
+        """Test handling of Unicode strings."""
+        problem = episode_pb2.Problem()
+        problem.description = "Calculate π to 10 decimal places 计算π"
+        problem.domain = "mathematics 数学"
+
+        serialized = problem.SerializeToString()
+        deserialized = episode_pb2.Problem()
+        deserialized.ParseFromString(serialized)
+
+        assert deserialized.description == "Calculate π to 10 decimal places 计算π"
+        assert deserialized.domain == "mathematics 数学"
+
+    def test_boundary_values(self):
+        """Test boundary values for numeric fields."""
+        outcome = episode_pb2.Outcome()
+        outcome.reward = -1.0  # Minimum
+        assert approx_equal(outcome.reward, -1.0)
+
+        outcome.reward = 1.0  # Maximum
+        assert approx_equal(outcome.reward, 1.0)
+
+        outcome.quality_score = 0.0  # Minimum
+        assert approx_equal(outcome.quality_score, 0.0)
+
+        outcome.quality_score = 1.0  # Maximum
+        assert approx_equal(outcome.quality_score, 1.0)
+
+
+@pytest.fixture
+def sample_episode():
+    """Fixture providing a complete sample episode."""
+    episode = episode_pb2.Episode()
+    episode.id = "ep_sample_001"
+
+    # Set timestamps
+    now = datetime.now(timezone.utc)
+    episode.created_at.FromDatetime(now)
+    episode.updated_at.FromDatetime(now)
+
+    # Problem
+    episode.problem.description = "Implement quicksort algorithm"
+    episode.problem.category = "coding"
+    episode.problem.difficulty = 6
+    episode.problem.domain = "algorithms"
+    episode.problem.context["language"] = "python"
+
+    # Plan
+    episode.plan.plan_id = "plan_001"
+    episode.plan.strategy = "Divide and conquer approach"
+    episode.plan.confidence = 0.9
+
+    # Subtasks
+    st1 = episode.plan.subtasks.add()
+    st1.id = "st_1"
+    st1.description = "Choose pivot element"
+    st1.tool = "code_generator"
+
+    st2 = episode.plan.subtasks.add()
+    st2.id = "st_2"
+    st2.description = "Partition array"
+    st2.tool = "code_generator"
+    st2.dependencies.append("st_1")
+
+    # Trajectory
+    step1 = episode.trajectory.steps.add()
+    step1.step_number = 1
+    step1.subtask_id = "st_1"
+    step1.status = episode_pb2.STEP_STATUS_SUCCESS
+    step1.duration = 2.5
+
+    # Outcome
+    episode.outcome.success = True
+    episode.outcome.reward = 0.85
+    episode.outcome.quality_score = 0.9
+
+    # Metadata
+    episode.metadata.agent_version = "v1.0.0"
+    episode.metadata.planner_model = "gpt-4"
+    episode.metadata.tags.extend(["sorting", "algorithms", "quicksort"])
+
+    return episode
+
+
+class TestCompleteWorkflow:
+    """Test complete workflows using the sample episode."""
+
+    def test_full_episode_lifecycle(self, sample_episode):
+        """Test complete episode creation, serialization, and retrieval."""
+        # Verify episode is complete
+        assert sample_episode.id != ""
+        assert sample_episode.problem.description != ""
+        assert len(sample_episode.plan.subtasks) > 0
+        assert sample_episode.outcome.success is True
+
+        # Serialize
+        serialized = sample_episode.SerializeToString()
+        assert len(serialized) > 0
+
+        # Deserialize
+        retrieved = episode_pb2.Episode()
+        retrieved.ParseFromString(serialized)
+
+        # Verify all key fields
+        assert retrieved.id == sample_episode.id
+        assert retrieved.problem.description == sample_episode.problem.description
+        assert len(retrieved.plan.subtasks) == len(
+            sample_episode.plan.subtasks)
+        assert approx_equal(retrieved.outcome.reward,
+                            sample_episode.outcome.reward)
+
+    def test_search_workflow(self, sample_episode):
+        """Test search request/response workflow."""
+        # Create search request
+        request = episode_pb2.SearchEpisodesRequest()
+        request.text_query = "quicksort implementation"
+        request.top_k = 5
+        request.min_similarity = 0.7
+        request.filter.success_only = True
+        request.filter.categories.append("coding")
+
+        # Simulate response
+        response = episode_pb2.SearchEpisodesResponse()
+        result = response.results.add()
+        result.episode.CopyFrom(sample_episode)
+        result.similarity = 0.95
+        result.rank = 1
+
+        assert len(response.results) == 1
+        assert response.results[0].episode.id == sample_episode.id
+        assert approx_equal(response.results[0].similarity, 0.95)
 
 
 # Add a simple test to verify import worked

@@ -4,7 +4,7 @@
     Helper functions for working with EpisodeFilter messages.  Handles the has_* pattern for optional fields in proto3
 """
 
-import episode_pb2
+from . import episode_pb2
 from typing import Optional, List
 from datetime import datetime
 from google.protobuf.timestamp_pb2 import Timestamp

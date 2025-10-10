@@ -2,7 +2,7 @@
 Generated Protocol Buffer definitions for Omega-RAG Episode schema.
 """
 
-from .episode_pb2 import (
+from .python.episode_pb2 import (
     Episode,
     Problem,
     Plan,
@@ -32,7 +32,7 @@ from .episode_pb2 import (
     GetStatisticsResponse,
 )
 
-from .filter_helpers import create_episode_filter, has_filter_value
+from .python.filter_helpers import create_episode_filter, has_filter_value
 
 __all__ = [
     "Episode",
