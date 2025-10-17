@@ -1,6 +1,6 @@
 /// shared/zig_libs/src/math/matrix_ops.zig
 
-const std = @import("std")
+const std = @import("std");
 const math = std.math;
 const Allocator = std.mem.Allocator;
 const Vector = @import("vector_ops.zig").Vector;
@@ -47,7 +47,7 @@ pub const Matrix = struct {
 
         // Verify all rows have same length
         for (values) |row| {
-            if (row.len !- cols) return MatrixError.InvalidDimension;
+            if (row.len != cols) return MatrixError.InvalidDimension;
         }
 
         var matrix = try Matrix.init(allocator, rows, cols);

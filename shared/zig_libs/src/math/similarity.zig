@@ -75,7 +75,7 @@ pub fn pearson(v1: Vector, v2: Vector) SimilarityError!f32 {
     }
 
     if (var1 == 0.0 or var2 == 0.0) {
-        retur SimilarityError.DivisionByZero;
+        return SimilarityError.DivisionByZero;
     }
 
     return cov / @sqrt(var1 * var2);
@@ -84,7 +84,7 @@ pub fn pearson(v1: Vector, v2: Vector) SimilarityError!f32 {
 /// Calculate Jaccard similarity (intersection over union)
 /// For continuous vectors, uses min/max interpretation
 pub fn jaccard(v1: Vector, v2: Vector) SimilarityError!f32 {
-    if (v1.dimension() != v2.dimension())
+    if (v1.dimension() != v2.dimension()) {
         return SimilarityError.DimensionMismatch;
     }
 

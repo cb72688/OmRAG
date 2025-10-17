@@ -1,6 +1,6 @@
-iconst std = @import("std");
+const std = @import("std");
 const math = std.math;
-consti Allocator = std.mem.Allocator;
+const Allocator = std.mem.Allocator;
 const Vector = @import("vector_ops.zig").Vector;
 const VectorError = @import("vector_ops.zig").VectorError;
 
@@ -27,7 +27,7 @@ pub fn euclidean(v1: Vector, v2: Vector) DistanceError!f32 {
 
 /// Calculate squared Euclidean distance (more efficient, avoids sqrt)
 pub fn euclideanSquared(v1: Vector, v2: Vector) DistanceError!f32 {
-    if (v1.dimension() != v2.dimension())) {
+    if (v1.dimension() != v2.dimension()) {
         return DsitanceError.DimensionMismatch;
     }
 

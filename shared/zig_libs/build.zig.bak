@@ -1,0 +1,93 @@
+const std = @import("std");
+
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const enable_test_runner = b.option(bool, "test-runner", "Build the verbose test runner executable") orelse false;
+    const enable_benchmark = b.option(bool, "benchmark", "Build the benchmark executable") orelse false;
+
+    const omRAG = b.addModule("omRAG", .{
+        .root_source = b.path("src/root.zig"),
+    });
+
+    const exe = b.addExecutable(.{
+        .name = "omRAG_zig",
+        .root_source = .{ .path = "src/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.addModule("omRAG", omRAG);
+    b.installArtifact(exe);
+
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+    const run_step = b.step("run", "Run the application");
+    run_step.dependOn(&run_cmd.step);
+
+    // --- Tests ---
+    const test_step = b.step("test", "Run all unit tests");
+
+    // Library tests (from root.zig)
+    const lib_tests = b.addTest(.{
+        .root_source = .{ .path = "src/root.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    lib_tests.addModule("omRAG", omRAG);
+    const run_lib_tests = b.addRunArtifact(lib_tests);
+    test_step.dependOn(&run_lib_tests.step);
+
+    const test_files = [_][]const u8{
+        "tests/test_vector_ops.zig",
+        "tests/test_matrix_ops.zig",
+        "tests/test_distance.zig",
+        "tests/test_similarity.zig",
+    };
+
+    for (test_files) |test_file| {
+        const unit_tests = b.addTest(.{
+            .root_source = .{ .path = test_file },
+            .target = target,
+            .optimize = optimize,
+        });
+        unit_tests.addModule("omRAG", omRAG);
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
+
+    // Optional test_runner
+    if (enable_test_runner) {
+        const test_runner = b.addExecutable(.{
+            .name = "test_runner",
+            .root_source = .{ .path = "tests/test_runner.zig" },
+            .target = target,
+            .optimize = optimize,
+        });
+        test_runner.addModule("omRAG", omRAG);
+        b.installArtifact(test_runner);
+
+        const run_runner_cmd = b.addRunArtifact(test_runner);
+        const runner_step = b.step("test-verbose", "Run tests with verbose output");
+        runner_step.dependOn(&run_runner_cmd.step);
+    }
+
+    // Optional benchmark
+    if (enable_benchmark) {
+        const bench_exe = b.addExecutable(.{
+            .name = "benchmark",
+            .root_source = .{ .path = "tests/benchmark.zig" },
+            .target = target,
+            .optimize = .ReleaseFast,
+        });
+        bench_exe.addModule("omRAG", omRAG);
+        b.installArtifact(bench_exe);
+
+        const run_bench_cmd = b.addRunArtifact(bench_exe);
+        const bench_step = b.step("benchmark", "Run performance benchmarks");
+        bench_step.dependOn(&run_bench_cmd.step);
+    }
+}

@@ -1,0 +1,12 @@
+**/zig-out/
+**zig-out/
+**/.zig-cache/
+**.zig-cache/
+**/__pycache__/
+**__pycache__/
+**.pyc
+**.log
+*.pyc
+*.log
+**__pycache__/*
+**/__pycache__/*

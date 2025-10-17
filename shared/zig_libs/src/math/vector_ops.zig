@@ -1,5 +1,4 @@
-#!/bin/zig
-# shared/zig_libs/src/math/vector_ops.zig
+/// shared/zig_libs/src/math/vector_ops.zig
 
 const std=@import("std");
 const math = std.math;
@@ -25,7 +24,7 @@ pub const Vector = struct {
         const data = try allocator.alloc(f32, values.len);
         @memcpy(data, values);
 
-        return Vecctor{
+        return Vector{
             .data = data,
             .allocator = allocator,
         };
@@ -33,7 +32,7 @@ pub const Vector = struct {
 
     /// Initialize vector from slice
     pub fn fromSlice(allocator: Allocator, values: []const f32) !Vector {
-        if (values.len == 0 return VectorError.InvalidDimension;
+        if (values.len == 0) return VectorError.InvalidDimension;
 
         const data = try allocator.alloc(f32, values.len);
             .data = data,
