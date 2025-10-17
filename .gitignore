@@ -1,0 +1,7 @@
+**/.zig-cache/
+.zig-cache
+**/__pycache__/
+__pycache__/
+**.log
+**.pyc
+.env
