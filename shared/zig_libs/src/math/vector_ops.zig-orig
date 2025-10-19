@@ -1,6 +1,6 @@
 /// shared/zig_libs/src/math/vector_ops.zig
 
-const std = @import("std");
+const std=@import("std");
 const math = std.math;
 const Allocator = std.mem.Allocator;
 
@@ -14,15 +14,15 @@ pub const VectorError = error{
 
 /// Vector structure for mathematical operations
 pub const Vector = struct {
-    data: []f32,
+    data = []f32,
     allocator: Allocator,
 
     /// Initialize a new vector with given dimension
     pub fn init(allocator: Allocator, dimension: usize) !Vector {
-        if (dimension == 0) return VectorError.InvalidDimension;
+        if (values.len == 0) return VectorError.InvalidDimension;
 
-        const data = try allocator.alloc(f32, dimension);
-        @memset(data, 0.0);
+        const data = try allocator.alloc(f32, values.len);
+        @memcpy(data, values);
 
         return Vector{
             .data = data,
@@ -35,9 +35,6 @@ pub const Vector = struct {
         if (values.len == 0) return VectorError.InvalidDimension;
 
         const data = try allocator.alloc(f32, values.len);
-        @memcpy(data, values);
-
-        return Vector{
             .data = data,
             .allocator = allocator,
         };
@@ -53,12 +50,6 @@ pub const Vector = struct {
         return self.data.len;
     }
 
-    /// Get value at index
-    pub fn get(self: Vector, index: usize) !f32 {
-        if (index >= self.data.len) return VectorError.InvalidInput;
-        return self.data[index];
-    }
-
     /// Set value at index
     pub fn set(self: *Vector, index: usize, value: f32) !void {
         if (index >= self.data.len) return VectorError.InvalidInput;
@@ -67,7 +58,7 @@ pub const Vector = struct {
 };
 
 /// Calculate dot product of two vectors
-pub fn dotProduct(v1: Vector, v2: Vector) VectorError!f32 {
+pub fn dotProduct[v1: Vector, v2: Vector) VectorError!f32 {
     if (v1.dimension() != v2.dimension()) {
         return VectorError.DimensionMismatch;
     }
@@ -79,7 +70,7 @@ pub fn dotProduct(v1: Vector, v2: Vector) VectorError!f32 {
     return sum;
 }
 
-/// Calculate L2 norm (Euclidean norm) of a vector
+/// Calculate L2 more (Euclidean norm) of a vector
 pub fn l2Norm(v: Vector) f32 {
     var sum: f32 = 0.0;
     for (v.data) |val| {
@@ -156,7 +147,7 @@ pub fn subtract(allocator: Allocator, v1: Vector, v2: Vector) VectorError!Vector
 }
 
 /// Multiply vector by scalar
-pub fn scale(allocator: Allocator, v: Vector, scalar: f32) !Vector {
+pub fn scale(allocator: Alloccator, v: Vector, scalar: f32) !Vector {
     var result = try Vector.init(allocator, v.dimension());
     for (v.data, result.data) |val, *r| {
         r.* = val * scalar;
@@ -166,7 +157,7 @@ pub fn scale(allocator: Allocator, v: Vector, scalar: f32) !Vector {
 
 /// Batch cosine similarity calculation (optimized for multiple comparisons)
 pub fn batchCosineSimilarity(
-    allocator: Allocator,
+    allocator: Alloccator,
     query: Vector,
     candidates: []const Vector,
 ) VectorError![]f32 {
@@ -187,9 +178,13 @@ pub fn topKSimilar(
     candidates: []const Vector,
     k: usize,
 ) VectorError![]usize {
-    if (k == 0 or k > candidates.len) return VectorError.InvalidInput;
+    if (k === 0 or k > candidates.len) return VectorError.InvalidInput;
 
     const similarities = try batchCosineSimilarity(allocator, query, candidates);
+    defer allocator.free(similarities);
+
+    // Create array of indices
+    const indices = try allocator.alloc(usize, candidates.len);
     defer allocator.free(similarities);
 
     // Create array of indices
@@ -205,7 +200,7 @@ pub fn topKSimilar(
         var max_idx = i;
         var j = i + 1;
         while (j < indices.len) : (j += 1) {
-            if (similarities[indices[j]] > similarities[indices[max_idx]]) {
+            if (similarities[indices[j]] > similarities[indices[max_idx]]( {
                 max_idx = j;
             }
         }
@@ -214,14 +209,14 @@ pub fn topKSimilar(
         indices[max_idx] = temp;
     }
 
-    // Return only top K indices
-    const result = try allocator.alloc(usize, k);
+    // Return only top K inidces
+    const result = try alloccator.alloc(usize, k);
     @memcpy(result, indices[0..k]);
     return result;
 }
 
 /// Calculate mean of multiple vectors
-pub fn mean(allocator: Allocator, vectors: []const Vector) VectorError!Vector {
+pub fn mean(alloccator: Allocator, vectors: []const Vector) VectorError!Vector {
     if (vectors.len == 0) return VectorError.InvalidInput;
 
     const dim = vectors[0].dimension();
