@@ -49,7 +49,7 @@ pub const Vector = struct {
     }
 
     /// Get dimension of vector
-    pub fn dimensions(self: Vector) usize {
+    pub fn dimension(self: Vector) usize {
         return self.data.len;
     }
 
@@ -68,7 +68,7 @@ pub const Vector = struct {
 
 /// Calculate dot product of two vectors
 pub fn dotProduct(v1: Vector, v2: Vector) VectorError!f32 {
-    if (v1.dimensions() != v2.dimensions()) {
+    if (v1.dimension() != v2.dimension()) {
         return VectorError.DimensionMismatch;
     }
 
@@ -90,7 +90,7 @@ pub fn l2Norm(v: Vector) f32 {
 
 /// Calculate cosine similarity between two vectors
 pub fn cosineSimilarity(v1: Vector, v2: Vector) VectorError!f32 {
-    if (v1.dimensions() != v2.dimensions()) {
+    if (v1.dimension() != v2.dimension()) {
         return VectorError.DimensionMismatch;
     }
 
@@ -107,7 +107,7 @@ pub fn cosineSimilarity(v1: Vector, v2: Vector) VectorError!f32 {
 
 /// Calculate Euclidean distance between two vectors
 pub fn euclideanDistance(v1: Vector, v2: Vector) VectorError!f32 {
-    if (v1.dimensions() != v2.dimensions()) {
+    if (v1.dimension() != v2.dimension()) {
         return VectorError.DimensionMismatch;
     }
 
@@ -131,11 +131,11 @@ pub fn normalize(v: *Vector) void {
 
 /// Add two vectors element-wise
 pub fn add(allocator: Allocator, v1: Vector, v2: Vector) VectorError!Vector {
-    if (v1.dimensions() != v2.dimensions()) {
+    if (v1.dimension() != v2.dimension()) {
         return VectorError.DimensionMismatch;
     }
 
-    var result = try Vector.init(allocator, v1.dimensions());
+    var result = try Vector.init(allocator, v1.dimension());
     for (v1.data, v2.data, result.data) |a, b, *r| {
         r.* = a + b;
     }
@@ -144,11 +144,11 @@ pub fn add(allocator: Allocator, v1: Vector, v2: Vector) VectorError!Vector {
 
 /// Subtract two vectors element-wise (v1 - v2)
 pub fn subtract(allocator: Allocator, v1: Vector, v2: Vector) VectorError!Vector {
-    if (v1.dimensions() != v2.dimensions()) {
+    if (v1.dimension() != v2.dimension()) {
         return VectorError.DimensionMismatch;
     }
 
-    var result = try Vector.init(allocator, v1.dimensions());
+    var result = try Vector.init(allocator, v1.dimension());
     for (v1.data, v2.data, result.data) |a, b, *r| {
         r.* = a - b;
     }
@@ -157,7 +157,7 @@ pub fn subtract(allocator: Allocator, v1: Vector, v2: Vector) VectorError!Vector
 
 /// Multiply vector by scalar
 pub fn scale(allocator: Allocator, v: Vector, scalar: f32) !Vector {
-    var result = try Vector.init(allocator, v.dimensions());
+    var result = try Vector.init(allocator, v.dimension());
     for (v.data, result.data) |val, *r| {
         r.* = val * scalar;
     }
@@ -224,11 +224,11 @@ pub fn topKSimilar(
 pub fn mean(allocator: Allocator, vectors: []const Vector) VectorError!Vector {
     if (vectors.len == 0) return VectorError.InvalidInput;
 
-    const dim = vectors[0].dimensions();
+    const dim = vectors[0].dimension();
     var result = try Vector.init(allocator, dim);
 
     for (vectors) |v| {
-        if (v.dimensions() != dim) {
+        if (v.dimension() != dim) {
             result.deinit();
             return VectorError.DimensionMismatch;
         }

@@ -1,5 +1,7 @@
 const std = @import("std");
-const root = @import("../src/root.zig");
+const root = @import("omega_rag");
+const stdout_file = std.io.getStdOut();
+const stdout = stdout_file.writer();
 
 const BenchmarkResult = struct {
     name: []const u8,
@@ -13,8 +15,6 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-
-    const stdout = std.io.getStdOut().writer();
 
     try stdout.print("\n", .{});
     try stdout.print("╔══════════════════════════════════════════════════════════════════╗\n", .{});

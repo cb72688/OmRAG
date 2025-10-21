@@ -81,14 +81,9 @@ pub fn build(b: *std.Build) void {
     benchmark_step.dependOn(&run_benchmark.step);
 
     // 7. Documentation generation.
-    // For docs, we need to create an object or library that can emit docs
     const docs_step = b.step("docs", "Generate documentation for the omega_rag library");
-    const lib_for_docs = b.addStaticLibrary(.{
-        .name = "omega_rag",
-        .root_module = omega_rag_module,
-    });
     const doc_gen = b.addInstallDirectory(.{
-        .source_dir = lib_for_docs.getEmittedDocs(),
+        .source_dir = omega_rag_module.getEmittedDocs(),
         .install_dir = .prefix,
         .install_subdir = "docs",
     });

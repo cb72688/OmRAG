@@ -34,7 +34,7 @@ test "Matrix from slice" {
     const row2 = [_]f32{ 4.0, 5.0, 6.0 };
     const values = [_][]const f32{ &row1, &row2 };
 
-    var m = try Matrix.fromSlice(allocator, &values);
+    var m = try Matrix.fromValues(allocator, &values);
     defer m.deinit();
 
     try testing.expectEqual(@as(usize, 2), m.rows);
@@ -70,9 +70,9 @@ test "Matrix addition"  {
     const row4 = [_]f32{ 7.0, 8.0 };
     const values2 = [_][]const f32{ &row3, &row4 };
 
-    var m1 = try Matrix.fromSlice(allocator, &values1);
+    var m1 = try Matrix.fromValues(allocator, &values1);
     defer m1.deinit();
-    var m2 = try Matrix.fromSlice(allocator, &values2);
+    var m2 = try Matrix.fromValues(allocator, &values2);
     defer m2.deinit();
 
     var result = try matrix_ops.add(allocator, m1, m2);
@@ -95,9 +95,9 @@ test "Matrix subtraction" {
     const row4 = [_]f32{ 3.0, 4.0};
     const values2 = [_][]const f32{ &row3, &row4 };
 
-    var m1 = try Matrix.fromSlice(allocator, &values1);
+    var m1 = try Matrix.fromValues(allocator, &values1);
     defer m1.deinit();
-    var m2 = try Matrix.fromSlice(allocator, &values2);
+    var m2 = try Matrix.fromValues(allocator, &values2);
     defer m2.deinit();
 
     var result = try matrix_ops.subtract(allocator, m1, m2);
@@ -116,7 +116,7 @@ test "Matrix scalar multiplication" {
     const row2 = [_]f32{ 3.0, 4.0 };
     const vlaues = [_][]const f32{ &row1, &row2 };
 
-    var m = try Matrix.fromSlice(allocator, &values);
+    var m = try Matrix.fromValues(allocator, &values);
     defer m.deinit();
 
     var result = try matrix_ops.scale(allocator, m, 2.5);
@@ -142,9 +142,9 @@ test "Matrix multiplication" {
     const row5 = [_]f32{ 11.0, 12.0 };
     const values2 = [_][]const f32{ &row3, &row4, &row5 };
 
-    var m1 = try Matrix.fromSlice(allocator, &values1);
+    var m1 = try Matrix.fromValues(allocator, &values1);
     defer m1.deinit();
-    var m2 = try Matrix.fromSlice(allocator, &values2);
+    var m2 = try Matrix.fromValues(allocator, &values2);
     defer m2.deinit();
 
     var result = try matrix_ops.multiply(allocator, m1, m2);
@@ -169,7 +169,7 @@ test "Matrix transpose" {
     const row2 = [_]f32{ 4.0, 5.0, 6.0 };
     const values = [_][]const f32{ &row1, &row2 };
 
-    var m = try Matrix.fromSlice(allocator, &values);
+    var m = try Matrix.fromValues(allocator, &values);
     defer m.deinit();
 
     var result = try matrix_ops.transpose(allocator, m);
@@ -193,7 +193,7 @@ test "Matrix determinant 2x2" {
     const row2 = [_]f32{ 4.0, 6.0 };
     const values = [_][]const f32{ &row1, &row2 };
 
-    var m = try Matrix.fromSlice(allocator, &values);
+    var m = try Matrix.fromValues(allocator, &values);
     defer m.deinit();
 
     const det = try matrix_ops.determinant(m);
@@ -209,7 +209,7 @@ test "Matrix determinant 3x3" {
     const row3 = [_]f32{ 2.0, 8.0, 7.0 };
     const values = [_][]const f32{ &row1, &row2, &row3 };
 
-    var m = try Matrix.fromSlice(allocator, &values);
+    var m = try Matrix.fromValues(allocator, &values);
     defer m.deinit();
 
     const det = try matrix_ops.determinant(m);
@@ -227,7 +227,7 @@ test "Matrix trace" {
     const row3 = [_]f32{ 7.0, 8.0, 9.0 };
     const values = [_][]const f32{ &row1, &row2, &row3 };
 
-    var m = try Matrix.fromSlice(allocator, &values);
+    var m = try Matrix.fromValues(allocator, &values);
     defer m.deinit();
 
     const tr = try matrix_ops.trace(m);
@@ -242,7 +242,7 @@ test "Frobenius norm" {
     const row2 = [_]f32{ 3.0, 4.0 };
     const values = [_][]const f32{ &row1, &row2 };
 
-    var m = try Matrix.fromSlice(allocator, &values);
+    var m = try Matrix.fromValues(allocator, &values);
     defer m.deinit();
 
     const norm = matrix_ops.frobeniusNorm(m);
@@ -261,9 +261,9 @@ test "Hadamard product" {
     const row4 = [_]f32{ 7.0, 8.0 };
     const values2 = [_][]const f32{ &row3, &row4 };
 
-    var m1 = try Matrix.fromSlice(allocator, &values1);
+    var m1 = try Matrix.fromValues(allocator, &values1);
     defer m1.deinit();
-    var m2 = try Matrix.fromSlice(allocator, &values2);
+    var m2 = try Matrix.fromValues(allocator, &values2);
     defer m2.deinit();
 
     var result = try matrix_ops.hadamardProduct(allocator, m1, m2);
@@ -282,7 +282,7 @@ test "Matrix vector multiplication" {
     const row2 = [_]f32{ 4.0, 5.0, 6.0 };
     const values = [_][]const f32{ &row1, &row2 };
 
-    var m = try Matrix.fromSlice(allocator, &values);
+    var m = try Matrix.fromValues(allocator, &values);
     defer m.deinit();
 
     const vec_vals = [_]f32{ 2.0, 1.0, 3.0 };
@@ -330,7 +330,7 @@ test "Set row and column" {
     const row3 = [_]f32{ 7.0, 8.0, 9.0 };
     const values = [_][]const f32{ &row1, &row2, &row3 };
 
-    var m = try Matrix.fromSlice(allocator, &values) };
+    var m = try Matrix.fromValues(allocator, &values) };
     defer m.deinit();
 
     try testing.expectEqual(@as(f32, 4.0), try r.get(0));
@@ -357,9 +357,9 @@ test "Matrix approximate equality" {
     const row4 = [_]f32{ 3.0001, 4.0001 };
     const values2 = [_][]const f32{ &row3, &row4 };
 
-    var m1 = try Matrix.fromSlice(allocator, &values1);
+    var m1 = try Matrix.fromValues(allocator, &values1);
     defer m1.deinit();
-    var m2 = try Matrix.fromSlice(allocator, &values2);
+    var m2 = try Matrix.fromValues(allocator, &values2);
     defer m2.deinit();
 
     try testing.expect(matrix_ops.approxEqual(m1, m2, 0.001));

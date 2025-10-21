@@ -24,36 +24,36 @@ pub const Matrix = struct {
     allocator: Allocator,
 
     /// Initialize a new matrix with given dimensions
-    pub fn init(allocator: Allocator, rows: usize, cols: usize) !Matrix {
-        if (rows == 0 or cols == 0) return MatrixError.InvalidDimension;
+    pub fn init(allocator: Allocator, row_count: usize, col_count: usize) !Matrix {
+        if (row_count == 0 or col_count == 0) return MatrixError.InvalidDimension;
 
-        const data = try allocator.alloc(f32, rows * cols);
+        const data = try allocator.alloc(f32, row_count * col_count);
         @memset(data, 0.0);
 
         return Matrix{
             .data = data,
-            .rows_count = rows,
-            .cols_count = cols,
+            .rows_count = row_count,
+            .cols_count = col_count,
             .allocator = allocator,
         };
     }
 
     /// Initialize matrix from 2D slice
-    pub fn fromSlice(allocator: Allocator, values: []const []const f32) !Matrix {
+    pub fn fromValues(allocator: Allocator, values: []const []const f32) !Matrix {
         if (values.len == 0) return MatrixError.InvalidDimension;
-        const rows = values.len;
-        const cols = values[0].len;
-        if (cols == 0) return MatrixError.InvalidDimension;
+        const nrows = values.len;
+        const ncols = values[0].len;
+        if (ncols == 0) return MatrixError.InvalidDimension;
 
         // Verify all rows have same length
-        for (values) |row| {
-            if (row.len != cols) return MatrixError.InvalidDimension;
+        for (values) |nrow| {
+            if (nrow.len != ncols) return MatrixError.InvalidDimension;
         }
 
-        var matrix = try Matrix.init(allocator, rows, cols);
+        var matrix = try Matrix.init(allocator, nrows, ncols);
 
-        for (values, 0..) |row, i| {
-            for (row, 0..) |val, j| {
+        for (values, 0..) |nrow, i| {
+            for (nrow, 0..) |val, j| {
                 try matrix.set(i, j, val);
             }
         }
@@ -62,11 +62,11 @@ pub const Matrix = struct {
     }
 
     /// Initialize identity matrix
-    pub fn identity(allocator: Allocator, size: usize) !Matrix {
-        var matrix = try Matrix.init(allocator, size, size);
+    pub fn identity(allocator: Allocator, sz: usize) !Matrix {
+        var matrix = try Matrix.init(allocator, sz, sz);
 
         var i: usize = 0;
-        while (i < size) : (i += 1) {
+        while (i < sz) : (i += 1) {
             try matrix.set(i, i, 1.0);
         }
 
@@ -89,37 +89,37 @@ pub const Matrix = struct {
     }
 
     /// Get value at position (row, col)
-    pub fn get(self: Matrix, row: usize, col: usize) !f32 {
-        if (row >= self.rows_count or col >= self.cols_count) return MatrixError.InvalidInput;
-        return self.data[row * self.cols_count + col];
+    pub fn get(self: Matrix, row_len: usize, col_len: usize) !f32 {
+        if (row_len >= self.rows_count or col_len >= self.cols_count) return MatrixError.InvalidInput;
+        return self.data[row_len * self.cols_count + col_len];
     }
 
     /// Set value at position (row, col)
-    pub fn set(self: *Matrix, row: usize, col: usize, value: f32) !void {
-        if (row >= self.rows_count or col >= self.cols_count) return MatrixError.InvalidInput;
-        self.data[row * self.cols_count + col] = value;
+    pub fn set(self: *Matrix, row_pos: usize, col_pos: usize, value_pos: f32) !void {
+        if (row_pos >= self.rows_count or col_pos >= self.cols_count) return MatrixError.InvalidInput;
+        self.data[row_pos * self.cols_count + col_pos] = value_pos;
     }
 
     /// Get a row as a vector
-    pub fn getRow(self: Matrix, allocator: Allocator, row: usize) !Vector {
-        if (row >= self.rows_count) return MatrixError.InvalidInput;
+    pub fn getRow(self: Matrix, allocator: Allocator, row_vec: usize) !Vector {
+        if (row_vec >= self.rows_count) return MatrixError.InvalidInput;
 
         var vec = try Vector.init(allocator, self.cols_count);
-        var col: usize = 0;
-        while (col < self.cols_count) : (col += 1) {
-            try vec.set(col, try self.get(row, col));
+        var col_vec: usize = 0;
+        while (col_vec < self.cols_count) : (col_vec += 1) {
+            try vec.set(col_vec, try self.get(row_vec, col_vec));
         }
         return vec;
     }
 
     /// Get a column as a vector
-    pub fn getColumn(self: Matrix, allocator: Allocator, col: usize) !Vector {
-        if (col >= self.cols_count) return MatrixError.InvalidInput;
+    pub fn getColumn(self: Matrix, allocator: Allocator, colVec: usize) !Vector {
+        if (colVec >= self.cols_count) return MatrixError.InvalidInput;
 
         var vec = try Vector.init(allocator, self.rows_count);
-        var row: usize = 0;
-        while (row < self.rows_count) : (row += 1) {
-            try vec.set(row, try self.get(row, col));
+        var rowVec: usize = 0;
+        while (rowVec < self.rows_count) : (rowVec += 1) {
+            try vec.set(rowVec, try self.get(rowVec, colVec));
         }
         return vec;
     }
